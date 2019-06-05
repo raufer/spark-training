@@ -1,140 +1,169 @@
-### Exercise 2: Hash Partitioner
+### Solution 2: Hash Partitioner
 
-Spark uses different partitioning schemes for various types of RDDs and operations. 
-In a case of using `parallelize()` data is evenly distributed between partitions using their indices 
-(no partitioning scheme is used).
-
-    So If there is no partitioner the partitioning is not based upon characteristic 
-    of data but distribution is random and uniformed across nodes.
-    
-Each RDD also possesses information about partitioning schema 
-(it can be invoked explicitly or derived via some transformations). 
+Method to label the duplicates:
 
 ```python
-from pyspark import SparkContext
+from pyspark.sql import functions as F
+from pyspark.sql.window import Window
 
 
-sc = SparkContext.getOrCreate()
-
-# The default data used for calculations
-nums = range(0, 10)
-print(nums)
-
-rdd = sc.parallelize(nums)
-
-print("Default parallelism: %s" % str(sc.defaultParallelism))
-print("Number of partitions: %s" % str(rdd.getNumPartitions()))
-print("Partitioner: %s" % str(rdd.partitioner))
-print("Partitions structure: %s" % str(rdd.glom().collect()))
-```
-
-Output
-
-```
-Default parallelism: 2
-Number of partitions: 2
-Partitioner: None
-Partitions structure: [[0, 1, 2, 3, 4], [5, 6, 7, 8, 9]]
-```
-
-The data was distributed across two partitions and each will be executed in a separate thread.
-
-What will happen when the number of partitions exceeds the number of data records?
+def enum(**enums):
+    """
+    Helper method to easily create a `Enum`.
+    Makes use of Python's `type` function acting as a metaclass,
+    i.e. a factory of classes
+    http://www.dabeaz.com/py3meta/
+    """
+    return type('Enum', (), enums)
 
 
-```python
-from pyspark import SparkContext
+def to_spark_column_list(arg):
+    """
+    Converts a string representing a column to a pypsark.sql.Column
+    Does nothing if already in the desired format
 
-rdd = sc.parallelize(nums, 15)
+    Normalizes an argument that can be a single spark column or a list of them
+    """
+    l = arg if isinstance(arg, list) else [arg]
+    res = [F.col(i) if isinstance(i, basestring) else i for i in l]
+    return res
 
-print("Number of partitions: %s" % str(rdd.getNumPartitions()))
-print("Partitioner: %s" % str(rdd.partitioner))
-print("Partitions structure: %s" % str(rdd.glom().collect()))
-```
 
-Output
+def rank_precise(partition_by, order_by, window=None):
+    """
+    Rank each line of a dataframe segregated by the 'parition_by' column(s)
+    This version of 'rank' provides a more fine grained control over the sorting mechanism
 
-```bazaar
-Number of partitions: 15
-Partitioner: None
-Partitions structure: [[], [0], [1], [], [2], [3], [], [4], [5], [], [6], [7], [], [8], [9]]
-```
+    'order_by' defines the column by which each group is to be ordered
+    a list of pairs: [(col, mode)] is expected
+    in this scenario, the 'mode' argument is ignored
+    >>> data = [('A', 110, 120), ('A', 110, 110), ('A', 100, 120), ('A', 100, 130)]
+    >>> df = hv_context.createDataFrame(data, ['id', 'val1', 'val2'])
+    +---+----+----+
+    | id|val1|val2|
+    +---+----+----+
+    |  A| 110| 120|
+    |  A| 110| 110|
+    |  A| 100| 120|
+    |  A| 100| 130|
+    +---+----+----+
+    >>> window_op = rank_precise(partition_by='id', order_by=[('val1', 'asc'), ('val2', 'desc')]))
+    >>> df.withColumn('rank', window_op)
+    +---+----+----+----+
+    | id|val1|val2|rank|
+    +---+----+----+----+
+    |  A| 100| 130|   1|
+    |  A| 100| 120|   2|
+    |  A| 110| 120|   3|
+    |  A| 110| 110|   4|
+    +---+----+----+----+
+    """
+    partcols = to_spark_column_list(partition_by)
+    ordercols = zip(to_spark_column_list([c for c, _ in order_by]), [m for _, m in order_by])
 
-You can see that Spark created requested a number of partitions but most of them are empty. 
-This is bad because the time needed to prepare a new thread for processing data (one element) 
-is significantly greater than processing time itself (you can analyze it in Spark UI).
+    w = Window.partitionBy(
+        *partcols
+    ).orderBy(
+        *[c.desc() if mode.startswith('desc') else c.asc() for c, mode in ordercols]
+    )
 
-### `coalesce()` and `repartition()`
-
-`coalesce()` and `repartition()` transformations are used for changing the number of partitions in the RDD.
-
-`repartition()` is calling `coalesce()` with explicit shuffling.
-
-The rules for using are as follows:
-
-    - if you are increasing the number of partitions use repartition()(performing full shuffle),
+    return F.row_number().over(w).alias('rank')
     
-    - if you are decreasing the number of partitions use coalesce() (minimizes shuffles)
     
-```python
-from pyspark.sql import HiveContext
+Labels = enum(
+    PRIMARY='Y',
+    DUPLICATE='N'
+)
 
-hc = HiveContext(sc)
 
-nums_df = hc.createDataFrame(list(range(0, 10)), ['num'])
+def labels_duplicates_by_date(df, groupcols, sortingcols, labelcol):
+    """
+    There are some contracts that are reported by both counterparties to a (possibly different)
+    Trading Repository. These duplicated contracts are expected to have the same Trade ID, which we
+    can use to flag duplicates using different methods.
 
-print("Number of partitions: %s"  % str(nums_df.rdd.getNumPartitions()))
-print("Partitions structure: %s" % str(nums_df.rdd.glom().collect()))
+    'groupcol' is the column(s) used to detect the duplicates
+    'labelcol' is the output column with the label indication
+    'sortingcol' is the column(s) used to decide which contracts are highest within each group, e.g. TBL.NOTIONAL_AMOUNT_1
+        [(col, 'asc'/'desc')]
 
-nums_df = nums_df.repartition(4)
+    We assume the timestamps come in ISO 8601 date format / UTC time format
 
-print("Number of partitions: %s" % str(nums_df.rdd.getNumPartitions()))
-print("Partitions structure: %s" % str(nums_df.rdd.glom().collect()))
-```
-
-Output
-
-```
-Number of partitions: 2
-Partitions structure: [[Row(num=0), Row(num=1), Row(num=2), Row(num=3), Row(num=4)], [Row(num=5), Row(num=6), Row(num=7), Row(num=8), Row(num=9)]]
-Number of partitions: 4
-Partitions structure: [[Row(num=1), Row(num=6)], [Row(num=2), Row(num=7)], [Row(num=3), Row(num=8)], [Row(num=0), Row(num=4), Row(num=5), Row(num=9)]]
-```
-
-### Hash Partitioner
-
-Everytime that we need to perform an operation over a group, e.g. using a `groupBy` or a `window function`, spark will distribute the 
-data among the different partitions using the `HashPartitioner`.
-
-To decide on which partition a particular raw belongs, the following operation is done:
-
-```
-partition = key.hashCode() % numPartitions
-```
-
-So rows, whose group have the same `hashCode`, will unavoidably fall into the same partition. This can
-lead to a data skew problem, where we have some partitions significantly bigger that the others.
-
-The skew increases the likelihood of a memory error. It also means the resources are not being efficiently used,
-since the job running time will be dominated by the `long running tasks`, e.g. a spark job that gets stuck at the last task `99/100`.
-
-### Exercise
-
-Some contracts have been reported more than once, which leads to duplicates. To analyze the data we need to pick one trade among each
-group of duplicated trades. Your task is to run a spark job that flags the valid contracts.
-
-If a contract if its `trade_id` is unique amid the rows or, in the case it belongs to a group of duplicates, ranks first given
-the following criteria:
+    https://en.wikipedia.org/wiki/ISO_8601
 
     Execution Timestamp: ISO 8601 'yyyy-MM-dd'T'HH:mm:ss'Z' (ascending)
     Effective Date Leg 1: ISO 8601 'yyyy-MM-dd' (ascending)
     Maturity Date: ISO 8601 'yyyy-MM-dd' (descending)
+    """
+
+    groupcols = groupcols if isinstance(groupcols, list) else [groupcols]
+
+    rank_op = rank_precise(partition_by=groupcols, order_by=sortingcols)
+    df = df.withColumn('rank', rank_op)
+
+    label_op = F.when(
+        reduce(lambda acc, x: acc | x, [F.col(c).isNull() for c in groupcols]), F.lit(None)
+    ).when(
+        F.col('rank') == 1, Labels.PRIMARY
+    ).otherwise(Labels.DUPLICATE)
+
+    df = df.withColumn(labelcol, label_op)
+    df = df.select(*[c for c in df.columns if c not in ['rank']])
+
+    return df
+
+```
+
+How to avoid NULL trade IDs causing problems. We salt all of the rows that have a NULL Trade ID.
+
+```python
+
+def random_hex_string(token='', n_bits=256):
+    """
+    Create a column that contains random values
+    Token is a prefix to post-add to the hash function output.
+    This can work as a watermark to identify random values
+
+    >>> token = '<TOKEN>'
+    >>> op = random_hex_string(token=token)
+    >>> df = df.withColumn('rand', op)
+    >>> df.show()
+    .+---+----+--------------------+
+    | id|name|                rand|
+    +---+----+--------------------+
+    |  0| Bob|<TOKEN>06de179159...|
+    |  1| Sue|<TOKEN>991789120b...|
+    |  2| Tom|<TOKEN>07f13393c3...|
+    +---+----+--------------------+
+    """
+    to_hash = F.monotonically_increasing_id().cast(T.StringType())
+    hex_string = F.sha2(to_hash, n_bits)
+    op = F.concat(F.lit(token), hex_string)
+    return op
     
-Create a new column `valid` where valid contracts have `Y` and duplicated contracts have `N`
+    
+tmp_group_col = 'trade_id_temp'
 
-**Note:** The `contracts` table has a considerable amount of rows with a NULL `trade id`. 
-How can we make sure that we won't have memory problems? You should find a way of preventing all of these rows falling into
-the same partition (as given by the above formula)
+salted_trade_id = F.when(
+    F.col('trade_id').isNull() | (F.col('trade_id') == ''), random_hex_string()
+).otherwise(
+    F.col('trade_id')
+)
 
+df = df.withColumn(tmp_group_col, salted_trade_id)
 
+groupcols = [tmp_group_col]
 
+sortingcols = [
+    ('execution_timestamp', 'asc'),
+    ('effective_date', 'asc'),
+    ('maturity_date', 'desc')
+]
+
+df = labels_duplicates_by_date(
+    df=df,
+    groupcols=groupcols,
+    sortingcols=sortingcols,
+    labelcol=TBL.DUP_METHOD_2
+)
+```
