@@ -1,0 +1,5 @@
+
+/.pytest_cache/
+/metastore_db/
+/.ipynb_checkpoints/
+/spark-1.6.3-bin-hadoop2.6/
