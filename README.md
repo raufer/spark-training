@@ -6,7 +6,12 @@ Spark automatically sets the number of partitions of an input file according to 
 It is crucial to ensure that spark applications run with the right level of parallelism. This is useful to ensure
 that we are leveraging the cluster's resources and also to prevent OOM errors.
 
-By default spark creates one partition for each block of the file in HDFS (64 / 128 MB by default)
+By default spark creates one partition for each block of the file in HDFS (64 / 128 MB by default).
+
+As a rule of thumb tasks should take at least 100 ms to execute; 
+you can ensure that this is the case by monitoring the task execution latency from the Spark Shell. 
+If your tasks take considerably longer than that keep increasing the level of parallelism, 
+by say 1.5, until performance stops improving.
 
 Generically the size of the dataset can be given by:
 
