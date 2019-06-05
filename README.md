@@ -1,105 +1,62 @@
-### Exercise 4: Parallelism Level
+### Solution 4: Parallelism Level
 
-Clusters will not be fully utilized unless the level of parallelism for each operation is high enough. 
-Spark automatically sets the number of partitions of an input file according to its size and for distributed shuffles. 
+Let's assume we have empirically estimated the average row size to be `800 bytes` (over a sample of 150 M records).
 
-It is crucial to ensure that spark applications run with the right level of parallelism. This is useful to ensure
-that we are leveraging the cluster's resources and also to prevent OOM errors.
+Given a dataframe, we must first know the number of rows it has. We can make use of the Hive metastore information.
 
-By default spark creates one partition for each block of the file in HDFS (64 / 128 MB by default)
-
-Generically the size of the dataset can be given by:
-
-`M = N * V * S`
-
-Where `N` is the number of records, `V` the number of variables (columns) and `S` the average width in bytes of a variable.
-The later should take into account the types of each variable and factor that into the average calculation.
-
-Alternatively, we can also use:
 
 ```python
-number Of Megabytes = M = (N*V*W) / 1024^2
+import math
+from pyspark import SparkContext
+from pyspark.sql import HiveContext
+
+sc = SparkContext.getOrCreate()
+hc = HiveContext(sc)
+
+
+AVG_RECORD_SIZE = 800
+DESIRED_PARTITION_SIZE = 128e6
+
+
+def working_units(sc):
+    """
+    Simple heuristic for the optimum number of partitions
+    """
+    exec_cores = int(sc._conf.get('spark.executor.cores', '1'))
+    exec_insts = int(sc._conf.get('spark.executor.instances', '1'))
+    return exec_cores * exec_insts
+    
+    
+def dynamic_parallelism_factor(hc, n):
+    """
+    Since the number of records for each file can have huge variations we need to be able
+    to partition the data dynamically, to prevent OOM errors.
+    We increase the multiplier for the number of tasks every N records
+
+    'N' is the number of records
+
+    Additionally we need to do the same for the default number of partitions that spark creates
+    after a shuffle stage.
+
+    Note that we also need to take into consideration the number of executors and cores / executor
+    to determine the optimal number of partitions.
+
+    An heuristic is to point each partition to have around 128 MB of data.
+    DESIRED_PARTITION_SIZE is the desired size of each partition that spark processes in each tasks.
+    Might be different from the actual block that is written into HDFS
+    """
+
+    units = working_units(hc._sc)
+
+    factor = (n * AVG_RECORD_SIZE) / (DESIRED_PARTITION_SIZE * units)
+    n_partitions = max(int(math.ceil(units * factor)), 1)
+
+    return n_partitions
+
+count = df.count()
+
+n_partitions = int(dynamic_parallelism_factor(hc, count))
 ```
 
-Where
 
-```python
-N  =  number of records
 
-V  =  number of variables
-
-W  =  average width in bytes of a variable
-```
-
-The 1,0242 in the denominator rescales the results to megabytes.
-
-We can estimate the average row size empirically, by sampling a couple of millions of rows or we can look to
-the schema of the data and estimate the average size based on that.
-
-To approximate `W  =  average width in bytes of a variable` we can use:
-
-| **Type of variable**                           | **Width**      |
-|------------------------------------------------|----------------|
-| Integers, −127 <= x <= 100                     | 1              |
-| Integers, 32,767 <= x <= 32,740                | 2              |
-| Integers, -2,147,483,647 <= x <= 2,147,483,620 | 4              |
-| Floats single precision                        | 4              |
-| Floats double precision                        | 8              |
-| Strings                                        | maximum length |
-
-Say that you have a 20,000-observation dataset. That dataset contains
-
-```
-1  string identifier of length 20                     20 
-
-10  small integers (1 byte each)                      10
-
-4  standard integers (2 bytes each)                    8
-
-5  floating-point numbers (4 bytes each)              20
-
---------------------------------------------------------
-
-20  variables total                                   58
-```
-
-Thus the average width of a variable is
-
-```python
-W = 58/20 = 2.9  bytes
-```
-
-The size of your dataset is
-
-```python
-M = 20000*20*2.9/1024^2 = 1.13 megabytes
-```
-
-This result slightly understates the size of the dataset because we have not included any variable labels, 
-value labels, or notes that you might add to the data. That does not amount to much. 
-For instance, imagine that you added variable labels to all 20 variables and that 
-the average length of the text of the labels was 22 characters. 
-
-### Parallelism
-
-The number of worker units that we have to process tasks in parallel is given by:
-
-`Units = Number of Executors x Number Cores / Executor`
-
-An heuristic is to point each partition to have around 128 MB of data. This is due to the default HDFS block size.
-
-So we need to dynamically calculate a parallelism factor `m`, which in turn should depend on the number of units available
-and the number of records to process.
-
-`m = (N . S) / (128 MB . Units)`
-
-### Exercise
-
-At the beginning of each spark job, the optimum parallelism level must be calculated.
-
-For each execution, the number of rows can vary dramatically. In order to make an efficient use of the resources
-we must balance computational stability and parallelism factor.
-
-Your task is to propose and implement a generic process that will run at the start of each spark job 
-and calculates the optimum parallelism level. It should make use of the spark arguments (e.g. executors, number of cores, etc)
-and also the initial loaded dataframe(s).
