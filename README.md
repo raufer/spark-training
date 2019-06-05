@@ -1,23 +1,44 @@
-### Spark Training
+### Exercise 1: Windows Functions
 
-Each exercise has its own branch.
+### Window Functions
+ 
+Window functions significantly improve the expressiveness power of SparkR. Tipically, builtin functions like `round` or `abs` take values from a single row as input and generate a single return for every input row.
+Other functions can be seen as *aggregate functions*, e.g. `sum`, `maximum` or `average`. These operate not only on a signgle row but on a group of rows and calculate a **single return value for every group**.
 
-```
-git checkout <exercise>
-```
+While these are extremely useful in practice, there is still a wide range of operations that cannot be expressed just by using them.
+More specifically, there isn't a way to mix both approaches, i.e. operate on a group of rows while still returning a **single value for every input row**. This can be a hige limitation for certain type of analysis. The following are simple examples of calcuations that require this capability:
 
-Exercises:
+    - Moving average
 
-```
-* exercise-01/window-functions
-```
+    - Cumulative sums
 
-### Data Generation
+    - Generally, every calculation that needs to access other row before the current one being processed.
 
-The exercises make use of two tables. `products` and `contracts` data.
+Window Functions fill this gap.
 
-The scripts to generate artificial data for both of these tables is in `data/<table>.py`.
-The values can be parameterized on the script.
+These are functions that will return a value for every input row of a table. The value that is returned, however, is calculated based on a group of rows, which tipically is called a *Frame*.
+Note that there is nothing preventing each row of having a unique frame associated with it. This last point is what makes Window Functions extremely useful.
 
-Note: for the `contracts` data, we need around 200 M rows. Since we need to parallelize the data from the driver,
-it must be done using several batches.
+ 
+There are various functions available:
+
+**Ranking Functions**
+
+`row_number`: assigns unique numbers to each row within the Frame given by the *order by* clause
+
+`rank`: behaves like `row_number` except that "equal" rows are ranked the same
+
+`dense_rank`: behaves like a `rank` with no gaps
+
+### Exercise
+
+Consider the `products` table. Answer the following questions:
+
+    1. What is the best selling product in each category?
+    2. What are the best and second best-selling product in each category?
+    3. What is the difference between the revenue of each product and the best selling product in the same category of the product?
+    4. What is the difference between the revenue of each product and the average revenue of the category if that product?
+    
+    
+    
+
