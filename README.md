@@ -1,49 +1,50 @@
-### Exercise 3: Range Partitioner
+### Solution 3: Range Partitioner
 
-When spark is performing a sorting operation, it makes use a Range Partitioner.
-
-Instead of basing the decision of partition allocation based on the hash value of the keys, it creates `n_partitions` buckets
-with ordered numerical ranges and then places each row on the corresponding bucket. 
-So the range partitioner uses a range to distribute to the respective partitions the keys that fall within a range. This method is suitable where there’s a natural ordering in the keys and the keys are non negative. 
-
-**Note:** When sorting a string column, the range partitioner uses a numerical representation of the string.
-
-Uses a range to distribute to the respective partitions the keys that fall within a range. This method is suitable where there’s a natural ordering in the keys and the keys are non negative.
-To actually build the buckets, an extra `count()` operation will be performed under the hood (try to see this on the spark UI).
-
-You can also check this in the pyspark source code:
-
-`python/pyspark/rdd.py`
+To prevent long running tasks we need to ensure that we do not have a high concentration of
+repeated values (on the sorting column)
 
 ```python
-rddSize = self.count()
-if not rddSize:
-    return self  # empty RDD
-maxSampleSize = numPartitions * 20.0  # constant from Spark's RangePartitioner
-fraction = min(maxSampleSize / max(rddSize, 1), 1.0)
-samples = self.sample(False, fraction, 1).map(lambda kv: kv[0]).collect()
-samples = sorted(samples, key=keyfunc)
+from pyspark.sql import functions as F
 
-# we have numPartitions many parts but one of the them has
-# an implicit boundary
-bounds = [samples[int(len(samples) * (i + 1) / numPartitions)]
-          for i in range(0, numPartitions - 1)]
+def salt_column(col, sep='', n_bits=256):
+    """
+    Adds random data as a prefix to the input 'col'.
+    Returns an string column with the new logic
 
-def rangePartitioner(k):
-    p = bisect.bisect_left(bounds, keyfunc(k))
-    if ascending:
-        return p
-    else:
-        return numPartitions - 1 - p
+    'n_bits' indicates the desired bit length of the salt to add
+    'sep' is the string to use as a separator, e.g. col + sep + salt
+
+    We compute the hash based on 'col' concatenated with an integer that is guaranteed
+    to be unique throughout the dataset
+
+    >>> df = sql_context.createDataFrame([(0, 'ID0'), (1, 'ID2'), (2, 'ID0'), (3, 'ID1')], ['index', 'id'])
+    >>> df.show()
+    +-----+---+
+    | index | id |
+    +-----+---+
+    | 0 | ID0 |
+    | 1 | ID2 |
+    | 2 | ID0 |
+    | 3 | ID1 |
+    +-----+---+
+    >>> df2 = df.withColumn('id', salt_column(col='id', n_bits=256))
+    >>> df2.sort('id').show()
+    +-----+--------------------+
+    |index|                  id|
+    +-----+--------------------+
+    |    2|ID068defa6e315e62...|
+    |    0|ID083ab9fb78995f2...|
+    |    3|ID1a9727997291822...|
+    |    1|ID2ee85ac0533215d...|
+    +-----+--------------------+
+    """
+    unique = F.concat(F.col(col), F.monotonically_increasing_id())
+    concatenated = F.concat_ws(sep, F.col(col), F.sha2(unique, n_bits))
+    return concatenated
+
+
+sortcols = [salt_column('trade_id', n_bits=256)]
+
+df = df.sort(sortcols)
 ```
-
-### Exercise
-
-Sort the `contracts` data by Trade ID efficiently, i.e. prevent the long running tasks problem.
-You need to find a way of having buckets (at sort time) with more spread out boundaries, while preserving a correct ordering.
-
-
-
-
-
 
