@@ -10,6 +10,8 @@ Exercises:
 
 ```
 * exercise-01/window-functions
+* exercise-02/hash-partitioner
+* exercise-03/range-partitioner
 ```
 
 ### Data Generation
