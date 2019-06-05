@@ -44,5 +44,6 @@ Suppose we have a 10 node cluster with the following specs:
 64GB RAM per Node
 ```
 
-How can we size a single session to make the best use of the full cluster?
+How can we size a single session to make the best use of the full cluster? 
+Propose and justify a possible session configuration.
 
