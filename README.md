@@ -32,3 +32,4 @@ Exercises make use of two tables: `products` and `contracts` data.
 The scripts to generate synthetic data for both of these tables are in `data/<table>.py`. The values can be parameterized on the script.
 
 **Note**: for the `contracts` data around 200 M rows are necessary. To parallelize the data from the driver data must be generated in multiple batches.
+
