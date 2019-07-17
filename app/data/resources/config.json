@@ -1,0 +1,15 @@
+{
+    "database": {
+        "name": "spark_training",
+        "tables": {
+            "products": {
+                "name": "products"
+            },
+            "contracts": {
+                "name": "contracts",
+                "batches": 10,
+                "batch_size": 1e6
+            }
+        }
+    }
+}
