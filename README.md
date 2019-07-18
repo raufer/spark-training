@@ -69,7 +69,7 @@ from pyspark.sql import HiveContext
 
 hc = HiveContext(sc)
 
-df_xc = hc.createDataFrame(list(range(0, 10)), ['num'])
+df_xc = hc.createDataFrame(zip(list(range(0, 10)), list(range(10, 20))), ['num', 'item'])
 
 print("Number of partitions: %s"  % str(df_xs.rdd.getNumPartitions()))
 print("Partitions structure: %s" % str(df_xs.rdd.glom().collect()))
@@ -82,9 +82,9 @@ print("Partitions structure: %s" % str(df_xs.rdd.glom().collect()))
 Output
 ```
 Number of partitions: 2
-Partitions structure: [[Row(num=0), Row(num=1), Row(num=2), Row(num=3), Row(num=4)], [Row(num=5), Row(num=6), Row(num=7), Row(num=8), Row(num=9)]]
+Partitions structure: [[Row(num=0, item=10), Row(num=1, item=11), Row(num=2, item=12), Row(num=3, item=13), Row(num=4, item=14)], [Row(num=5, item=15), Row(num=6, item=16), Row(num=7, item=17), Row(num=8, item=18), Row(num=9, item=19)]]
 Number of partitions: 4
-Partitions structure: [[Row(num=1), Row(num=6)], [Row(num=2), Row(num=7)], [Row(num=3), Row(num=8)], [Row(num=0), Row(num=4), Row(num=5), Row(num=9)]]
+Partitions structure: [[Row(num=1, item=10), Row(num=6, item=16)], [Row(num=2, item=12), Row(num=7, item=17)], [Row(num=3, item=13), Row(num=8, item=18)], [Row(num=0, item=10), Row(num=4, item=14), Row(num=5, item=15), Row(num=9, item=19)]]
 ```
 
 ## Hash Partitioner
