@@ -23,9 +23,9 @@ hc = HiveContext(sc)
 df = hc.table(database + '.' + table)
 
 w = Window.partitionBy('category').orderBy(F.col('revenue').desc())
-dfw= df.withColumn('rank', F.row_number().over(w))
+dfs1= df.withColumn('rank', F.row_number().over(w))
 
-dfw.filter(F.col('rank') == 1).show()
+dfs1.filter(F.col('rank') == 1).show()
 ```
 
 #### 2. What are the best and second best-selling product in each category?
@@ -45,11 +45,10 @@ hc = HiveContext(sc)
 
 df = hc.table(database + '.' + 'table')
 
-window = w = Window.partitionBy('category').orderBy(F.col('revenue').desc())
-df = df.withColumn('rank', F.row_number().over(w))
+w = Window.partitionBy('category').orderBy(F.col('revenue').desc())
+dfs2 = df.withColumn('rank', F.row_number().over(w))
 
-answer = df.filter(F.col('rank') <= 1)
-answer.show()
+dfs2.filter(F.col('rank') <= 1).show()
 ```
 
 #### 3. What is the difference between the revenue of each product and the best selling product in the same category of the product?
