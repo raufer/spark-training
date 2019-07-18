@@ -29,7 +29,6 @@ dfs1.filter(F.col('rank') == 1).show()
 ```
 
 ## 2. What are the best and second best-selling product in each category?
-
 ```python
 from pyspark import SparkContext
 from pyspark import HiveContext
@@ -52,7 +51,6 @@ dfs2.filter(F.col('rank') <= 2).show()
 ```
 
 ## 3. What is the difference between the revenue of each product and the best selling product in the same category of the product?
-
 ```python
 from pyspark import SparkContext
 from pyspark import HiveContext
@@ -76,7 +74,6 @@ dfs3.show()
 ```
 
 ## 4. What is the difference between the revenue of each product and the average revenue of the category if that product?
-    
 ```python
 from pyspark import SparkContext
 from pyspark import HiveContext
