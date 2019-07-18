@@ -1,7 +1,5 @@
-### Solution 2: Hash Partitioner
-
+# Solution 2: Hash Partitioner
 Method to label the duplicates:
-
 ```python
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
