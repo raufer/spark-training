@@ -19,15 +19,15 @@ def createTableProducts(hc, json_config):
 
     data = [
         ('Thin', 'Cell phone', 6000),
-        ('Normal', 'Table', 1500),
+        ('Normal', 'Tablet', 1500),
         ('Mini', 'Tablet', 5500),
         ('Ultra thin', 'Cell phone', 5000),
         ('Vey thin', 'Cell phone', 6000),
-        ('Big', 'Table', 2500),
+        ('Big', 'Tablet', 2500),
         ('Bendable', 'Cell phone', 3000),
         ('Foldable', 'Cell phone', 3000),
-        ('Pro', 'Table', 5400),
-        ('Pro2', 'Table', 6500)
+        ('Pro', 'Tablet', 5400),
+        ('Pro2', 'Tablet', 6500)
     ]
     df = hc.createDataFrame(data, ['product', 'category', 'revenue'])
     df.write.format("orc").mode("append").saveAsTable(database + "." + table)
