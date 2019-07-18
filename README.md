@@ -48,7 +48,7 @@ df = hc.table(database + '.' + 'table')
 w = Window.partitionBy('category').orderBy(F.col('revenue').desc())
 dfs2 = df.withColumn('rank', F.row_number().over(w))
 
-dfs2.filter(F.col('rank') <= 1).show()
+dfs2.filter(F.col('rank') <= 2).show()
 ```
 
 #### 3. What is the difference between the revenue of each product and the best selling product in the same category of the product?
