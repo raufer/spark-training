@@ -128,11 +128,11 @@ BATCH_SIZE = 1
 
 spark = SparkSession.builder.getOrCreate()
 
-for _ in NUMBER_OF_BACTHES:
+for _ in range(NUMBER_OF_BACTHES):
 
     data = batch(BATCH_SIZE)
-    df = spark.createDataFrame(data, schema)
 
+    df = spark.createDataFrame(data, schema)
     df.write.format('orc').saveAsTable(name='trades', mode='overwrite')
 
 
