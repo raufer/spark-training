@@ -1,6 +1,9 @@
 # Solution 2: Hash Partitioner
 Method to label the duplicates:
 ```python
+from pyspark import SparkContext
+from pyspark import HiveContext
+
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
 
@@ -23,8 +26,7 @@ def to_spark_column_list(arg):
     Normalizes an argument that can be a single spark column or a list of them
     """
     l = arg if isinstance(arg, list) else [arg]
-    res = [F.col(i) if isinstance(i, basestring) else i for i in l]
-    return res
+    return [F.col(i) if isinstance(i, basestring) else i for i in l]
 
 
 def rank_precise(partition_by, order_by, window=None):
