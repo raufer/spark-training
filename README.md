@@ -1,10 +1,14 @@
-### Solution 2: Hash Partitioner
-
+# Solution 2: Hash Partitioner
 Method to label the duplicates:
-
 ```python
+from pyspark import SparkContext
+from pyspark import HiveContext
+
 from pyspark.sql import functions as F
 from pyspark.sql.window import Window
+
+
+hc = Hivecontext(sc)
 
 
 def enum(**enums):
@@ -25,8 +29,7 @@ def to_spark_column_list(arg):
     Normalizes an argument that can be a single spark column or a list of them
     """
     l = arg if isinstance(arg, list) else [arg]
-    res = [F.col(i) if isinstance(i, basestring) else i for i in l]
-    return res
+    return [F.col(i) if isinstance(i, basestring) else i for i in l]
 
 
 def rank_precise(partition_by, order_by, window=None):
@@ -38,7 +41,7 @@ def rank_precise(partition_by, order_by, window=None):
     a list of pairs: [(col, mode)] is expected
     in this scenario, the 'mode' argument is ignored
     >>> data = [('A', 110, 120), ('A', 110, 110), ('A', 100, 120), ('A', 100, 130)]
-    >>> df = hv_context.createDataFrame(data, ['id', 'val1', 'val2'])
+    >>> df = hc.createDataFrame(data, ['id', 'val1', 'val2']).show()
     +---+----+----+
     | id|val1|val2|
     +---+----+----+
@@ -48,7 +51,7 @@ def rank_precise(partition_by, order_by, window=None):
     |  A| 100| 130|
     +---+----+----+
     >>> window_op = rank_precise(partition_by='id', order_by=[('val1', 'asc'), ('val2', 'desc')]))
-    >>> df.withColumn('rank', window_op)
+    >>> df.withColumn('rank', window_op).show()
     +---+----+----+----+
     | id|val1|val2|rank|
     +---+----+----+----+
@@ -58,14 +61,11 @@ def rank_precise(partition_by, order_by, window=None):
     |  A| 110| 110|   4|
     +---+----+----+----+
     """
-    partcols = to_spark_column_list(partition_by)
-    ordercols = zip(to_spark_column_list([c for c, _ in order_by]), [m for _, m in order_by])
+    partcols = to_spark_column_list(arg=partition_by)
+    ordercols = zip(to_spark_column_list(arg=[c for c, _ in order_by]), [m for _, m in order_by])
 
-    w = Window.partitionBy(
-        *partcols
-    ).orderBy(
-        *[c.desc() if mode.startswith('desc') else c.asc() for c, mode in ordercols]
-    )
+    w = Window.partitionBy(*partcols).orderBy(
+        *[c.desc() if mode.startswith('desc') else c.asc() for c, mode in ordercols])
 
     return F.row_number().over(w).alias('rank')
     
@@ -95,23 +95,16 @@ def labels_duplicates_by_date(df, groupcols, sortingcols, labelcol):
     Effective Date Leg 1: ISO 8601 'yyyy-MM-dd' (ascending)
     Maturity Date: ISO 8601 'yyyy-MM-dd' (descending)
     """
-
     groupcols = groupcols if isinstance(groupcols, list) else [groupcols]
 
     rank_op = rank_precise(partition_by=groupcols, order_by=sortingcols)
     df = df.withColumn('rank', rank_op)
 
-    label_op = F.when(
-        reduce(lambda acc, x: acc | x, [F.col(c).isNull() for c in groupcols]), F.lit(None)
-    ).when(
-        F.col('rank') == 1, Labels.PRIMARY
-    ).otherwise(Labels.DUPLICATE)
+    label_op = F.when(reduce(lambda acc, x: acc | x, [F.col(c).isNull() for c in groupcols]), F.lit(None)).when(
+        F.col('rank') == 1, Labels.PRIMARY).otherwise(Labels.DUPLICATE)
 
     df = df.withColumn(labelcol, label_op)
-    df = df.select(*[c for c in df.columns if c not in ['rank']])
-
-    return df
-
+    return df.select(*[c for c in df.columns if c not in ['rank']])
 ```
 
 How to avoid NULL trade IDs causing problems. We salt all of the rows that have a NULL Trade ID.
@@ -126,8 +119,7 @@ def random_hex_string(token='', n_bits=256):
 
     >>> token = '<TOKEN>'
     >>> op = random_hex_string(token=token)
-    >>> df = df.withColumn('rand', op)
-    >>> df.show()
+    >>> df.withColumn('rand', op).show()
     .+---+----+--------------------+
     | id|name|                rand|
     +---+----+--------------------+
@@ -138,17 +130,15 @@ def random_hex_string(token='', n_bits=256):
     """
     to_hash = F.monotonically_increasing_id().cast(T.StringType())
     hex_string = F.sha2(to_hash, n_bits)
-    op = F.concat(F.lit(token), hex_string)
-    return op
+    return F.concat(F.lit(token), hex_string)
     
+
+from pyspark.sql import types as T
     
 tmp_group_col = 'trade_id_temp'
 
-salted_trade_id = F.when(
-    F.col('trade_id').isNull() | (F.col('trade_id') == ''), random_hex_string()
-).otherwise(
-    F.col('trade_id')
-)
+salted_trade_id = F.when(F.col('trade_id').isNull() | (F.col('trade_id') == ''), random_hex_string()).otherwise(
+    F.col('trade_id'))
 
 df = df.withColumn(tmp_group_col, salted_trade_id)
 
@@ -160,10 +150,10 @@ sortingcols = [
     ('maturity_date', 'desc')
 ]
 
-df = labels_duplicates_by_date(
+labels_duplicates_by_date(
     df=df,
     groupcols=groupcols,
     sortingcols=sortingcols,
     labelcol=TBL.DUP_METHOD_2
-)
+).show()
 ```
