@@ -6,10 +6,12 @@ import datetime
 from pyspark.sql import HiveSession
 import pyspark.sql.types as T
 
+from app.common import util_functions
+
 
 def deleteTableContracts(hc, json_config):
     db = json_config.get("database").get("name")
-    table = json_config.get("database").get("tables").get("trades").get("name")
+    table = json_config.get("database").get("tables").get("columns").get("name")
     if util_functions.table_exists(hc=hc, db=db, table=table):
         hc.sql("DROP TABLE IF EXISTS %s.%s" % (db, table))
 
@@ -85,7 +87,7 @@ def createTableContracts(hc, json_config):
 
     def generate_record():
         id = str(uuid.uuid1())
-        trade_id = 'trade_{}'.format(random.randint(1e5, 1e7))
+        trade_id =  '' if random.random() < 0.4 'trade_{}'.format(random.randint(1e5, 1e7))
 
         counterparty_1, counterparty_1_sector, counterparty_1_jurisdiction = _counterparty()
         counterparty_2, counterparty_2_sector, counterparty_2_jurisdiction = _counterparty()
@@ -116,7 +118,7 @@ def createTableContracts(hc, json_config):
 
 
     database = json_config.get("database").get("name")
-    table = json_config.get("database").get("tables").get("trades").get("name")
+    table = json_config.get("database").get("tables").get("columns").get("name")
 
     hc.sql("USE %s" % (database,))
 
@@ -133,7 +135,7 @@ def createTableContracts(hc, json_config):
         T.StructField('counterparty_sector_1', T.StringType(), True),
         T.StructField('counterparty_sector_2', T.StringType(), True),
         T.StructField('notional_currency', T.StringType(), True),
-        T.StructField('notional_amount', T.DecimalType(38, 12), True),
+        T.StructField('notional_amount', T.FloatType(), True),
         T.StructField('reporting_timestamp', T.TimestampType(), True),
         T.StructField('execution_date', T.DateType(), True)
     ])
