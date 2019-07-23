@@ -154,6 +154,6 @@ labels_duplicates_by_date(
     df=df,
     groupcols=groupcols,
     sortingcols=sortingcols,
-    labelcol=TBL.DUP_METHOD_2
+    labelcol='valid'
 ).show()
 ```
