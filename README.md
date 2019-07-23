@@ -1,7 +1,6 @@
-### Solution 3: Range Partitioner
+# Solution 3: Range Partitioner
 
-To prevent long running tasks we need to ensure that we do not have a high concentration of
-repeated values (on the sorting column)
+To prevent long running tasks we need to ensure that we do not have a high concentration of repeated values (on the sorting column)
 
 ```python
 from pyspark.sql import functions as F
@@ -47,4 +46,3 @@ sortcols = [salt_column('trade_id', n_bits=256)]
 
 df = df.sort(sortcols)
 ```
-
