@@ -71,8 +71,8 @@ hc = HiveContext(sc)
 
 df_xc = hc.createDataFrame(zip(list(range(0, 10)), list(range(10, 20))), ['num', 'item'])
 
-print("Number of partitions: %s"  % str(df_xs.rdd.getNumPartitions()))
-print("Partitions structure: %s" % str(df_xs.rdd.glom().collect()))
+print("Number of partitions: %s"  % str(df_xc.rdd.getNumPartitions()))
+print("Partitions structure: %s" % str(df_xc.rdd.glom().collect()))
 
 df_xs = df_xs.repartition(4)
 
@@ -94,11 +94,9 @@ To decide on which partition a particular raw belongs, the following operation i
 ```
 partition = key.hashCode() % numPartitions
 ```
-So rows, whose group have the same `hashCode`, will unavoidably fall into the same partition. This can
-lead to a data skew problem, where we have some partitions significantly bigger that the others.
+So rows, whose group have the same `hashCode`, will unavoidably fall into the same partition. This can lead to a data skew problem, where we have some partitions significantly bigger that the others.
 
-The skew increases the likelihood of a memory error. It also means the resources are not being efficiently used,
-since the job running time will be dominated by the `long running tasks`, e.g. a spark job that gets stuck at the last task `99/100`.
+The skew increases the likelihood of a memory error. It also means the resources are not being efficiently used, since the job running time will be dominated by the `long running tasks`, e.g. a spark job that gets stuck at the last task `99/100`.
 
 ## Exercise
 Some contracts have been reported more than once, which leads to duplicates. To analyze the data we need to pick one trade among each group of duplicated trades. Your task is to run a spark job that flags the valid contracts.
@@ -106,11 +104,9 @@ Some contracts have been reported more than once, which leads to duplicates. To 
 If a contract's `trade_id` is unique amid the rows or, in the case it belongs to a group of duplicates, ranks first given
 the following criteria:
 
-- Execution Timestamp: ISO 8601 'yyyy-MM-dd'T'HH:mm:ss'Z' (ascending)
-- Effective Date Leg 1: ISO 8601 'yyyy-MM-dd' (ascending)
-- Maturity Date: ISO 8601 'yyyy-MM-dd' (descending)
+- Reporting Timestamp: ISO 8601 'yyyy-MM-dd'T'HH:mm:ss'Z' (ascending)
+- Execution Date Leg 1: ISO 8601 'yyyy-MM-dd' (descending)
     
 Create a new column `valid` where valid contracts have `Y` and duplicated contracts have `N`
 
-**Note:** The `contracts` table has a considerable amount of rows with a NULL `trade id`. How can we make sure that we won't have memory problems? You should find a way of preventing all of these rows falling into
-the same partition (as given by the above formula)
+**Note:** The `contracts` table has a considerable amount of rows with a NULL `trade id`. How can we make sure that we won't have memory problems? You should find a way of preventing all of these rows falling into the same partition (as given by the above formula)
