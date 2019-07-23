@@ -6,17 +6,18 @@ from app.common import util_functions
 from app.data import database
 from app.data import contracts
 from app.data import products
+from app.data import trades 
 
 
 def main(args=None):
     def create():
         database.create_database(hc=hc, json_config=json_config)
-        contracts.createTableContracts(hc=hc, json_config=json_config)
+        trades.createTableContracts(hc=hc, json_config=json_config)
         products.createTableProducts(hc=hc, json_config=json_config)
 
 
     def delete():
-        contracts.deleteTableContracts(hc=hc, json_config=json_config)
+        trades.deleteTableContracts(hc=hc, json_config=json_config)
         products.deleteTableProducts(hc=hc, json_config=json_config)
         database.delete_database(hc=hc, json_config=json_config)
 
@@ -26,9 +27,13 @@ def main(args=None):
 
     sc = SparkContext.getOrCreate()
     hc = HiveContext(sc)
+    hc.setConf("hive.exec.dynamic.partition", "true")
+    hc.setConf("hive.exec.dynamic.partition.mode", "nonstrict")
+    hc.setConf("spark.sql.hive.convertMetastoreOrc", "false")
+
     
     if args.action == "create":
-        delete()
+        # delete()
         create()
 
     elif args.action == "delete":
