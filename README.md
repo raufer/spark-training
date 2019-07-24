@@ -128,9 +128,8 @@ def random_hex_string(token='', n_bits=256):
     |  2| Tom|<TOKEN>07f13393c3...|
     +---+----+--------------------+
     """
-    to_hash = F.monotonically_increasing_id().cast(T.StringType())
-    hex_string = F.sha2(to_hash, n_bits)
-    return F.concat(F.lit(token), hex_string)
+    unique = F.monotonically_increasing_id().cast(T.StringType())
+    return F.concat(F.lit(token), unique)
     
 
 from pyspark.sql import types as T
