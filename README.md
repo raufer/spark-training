@@ -7,7 +7,7 @@ from pyspark.sql import functions as F
 
 def salt_column(col, sep=''):
     """
-    Adds random data as a prefix to the input `col`.
+    Adds random data as a suffix to the input `col`.
     Returns an string column with the new logic
 
     `sep` is the string to use as a separator, e.g. col + sep + salt
