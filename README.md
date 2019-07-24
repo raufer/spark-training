@@ -6,7 +6,7 @@ Instead of basing the decision of partition allocation based on the hash value o
 
 **Note:** When sorting a string column, the range partitioner uses a numerical representation of the string.
 
-To actually build the buckets, an extra `count()` operation will be performed under the hood (try to see this on the spark UI). You can also check this in the pyspark source code:
+To actually build the buckets, an extra `count()` operation will be performed under the hood (try to see this on the spark UI). You can also check this in the PySpark source code:
 
 `python/pyspark/rdd.py`
 ```python
@@ -32,6 +32,4 @@ def rangePartitioner(k):
 ```
 
 ## Exercise
-
-Sort the `contracts` data by Trade ID efficiently, i.e. prevent the long running tasks problem.
-You need to find a way of having buckets (at sort time) with more spread out boundaries, while preserving a correct ordering.
+Sort the `contracts` data by Trade ID efficiently, i.e. prevent the long running tasks problem. You need to find a way of having buckets (at sort time) while preserving a correct ordering.
