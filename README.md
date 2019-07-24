@@ -1,4 +1,4 @@
-### Solution 4: Parallelism Level
+# Solution 4: Parallelism Level
 
 Let's assume we have empirically estimated the average row size to be `800 bytes` (over a sample of 150 M records).
 
@@ -31,9 +31,9 @@ def dynamic_parallelism_factor(hc, n):
     """
     Since the number of records for each file can have huge variations we need to be able
     to partition the data dynamically, to prevent OOM errors.
-    We increase the multiplier for the number of tasks every N records
+    We increase the multiplier for the number of tasks every N records.
 
-    'N' is the number of records
+    'N' is the number of records.
 
     Additionally we need to do the same for the default number of partitions that spark creates
     after a shuffle stage.
@@ -43,7 +43,7 @@ def dynamic_parallelism_factor(hc, n):
 
     An heuristic is to point each partition to have around 128 MB of data.
     DESIRED_PARTITION_SIZE is the desired size of each partition that spark processes in each tasks.
-    Might be different from the actual block that is written into HDFS
+    Might be different from the actual block that is written into HDFS.
     """
 
     units = working_units(hc._sc)
@@ -56,6 +56,7 @@ def dynamic_parallelism_factor(hc, n):
 count = df.count()
 
 n_partitions = int(dynamic_parallelism_factor(hc, count))
+print n_partitions
 ```
 
 
