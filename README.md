@@ -62,17 +62,7 @@ M = 20000*20*2.9/1024^2 = 1.13 megabytes
 This result slightly understates the size of the data set because we have not included any variable labels, value labels, or notes that you might add to the data. That does not amount to much. For instance, imagine that you added variable labels to all 20 variables and that the average length of the text of the labels was 22 characters. 
 
 ## Parallelism
-The number of worker units that we have to process tasks in parallel is given by:
-```python
-Units = Number of Executors x Number Cores / Executor
-```
 An heuristic is to point each partition to have around 128 MB of data. This is due to the default HDFS block size.
-
-So we need to dynamically calculate a parallelism factor `m`, which in turn should depend on the number of units available
-and the number of records to process.
-```python
-m = (N . S) / (128 MB . Units)
-```
 
 ## Exercise
 At the beginning of each spark job, the optimum parallelism level must be calculated.
