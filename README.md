@@ -21,7 +21,7 @@ Additional considerations:
 - Each executor has a JVM.
 - An executor with more than one core can run multiple tasks in the same JVM.
 
-#### Exercise
+## Exercise
 Suppose we have a 10 node cluster with the following specs:
 ```
 10 Nodes
