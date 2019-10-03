@@ -50,6 +50,23 @@ products = spark.createDataFrame(data, ['product', 'category', 'revenue'])
 products.show()
 ```
 
+```
++----------+----------+-------+
+|   product|  category|revenue|
++----------+----------+-------+
+|      Thin|Cell phone|   6000|
+|    Normal|    Tablet|   1500|
+|      Mini|    Tablet|   5500|
+|Ultra thin|Cell phone|   5000|
+|  Vey thin|Cell phone|   6000|
+|       Big|    Tablet|   2500|
+|  Bendable|Cell phone|   3000|
+|  Foldable|Cell phone|   3000|
+|       Pro|    Tablet|   5400|
+|      Pro2|    Tablet|   6500|
++----------+----------+-------+
+```
+
 Answer the following questions:
 
 1. What is the best selling product in each category?
