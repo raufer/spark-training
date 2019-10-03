@@ -26,7 +26,7 @@ There are various **ranking functions** available:
 ## Exercise
 Consider the `products` table.
 
-```
+```python
 from pyspark.sql import SparkSession
 
 
