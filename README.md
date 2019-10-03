@@ -24,7 +24,34 @@ There are various **ranking functions** available:
 - `dense_rank`: behaves like a `rank` with no gaps
 
 ## Exercise
-Consider the `products` table. Answer the following questions:
+Consider the `products` table.
+
+```
+from pyspark.sql import SparkSession
+
+
+spark = SparkSession.builder.master("local").getOrCreate()
+
+data = [
+    ('Thin', 'Cell phone', 6000),
+    ('Normal', 'Tablet', 1500),
+    ('Mini', 'Tablet', 5500),
+    ('Ultra thin', 'Cell phone', 5000),
+    ('Vey thin', 'Cell phone', 6000),
+    ('Big', 'Tablet', 2500),
+    ('Bendable', 'Cell phone', 3000),
+    ('Foldable', 'Cell phone', 3000),
+    ('Pro', 'Tablet', 5400),
+    ('Pro2', 'Tablet', 6500)
+]
+
+products = spark.createDataFrame(data, ['product', 'category', 'revenue'])
+
+products.show()
+```
+
+Answer the following questions:
+
 1. What is the best selling product in each category?
 2. What are the best and second best-selling product in each category?
 3. What is the difference between the revenue of each product and the best selling product in the same category of the product?
